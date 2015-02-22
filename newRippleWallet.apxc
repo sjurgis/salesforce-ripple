@@ -1,0 +1,42 @@
+public class newRippleWallet {
+    @future(callout=true)
+    public static void createNew(id walletId) {
+        Http httpProtocol = new Http();
+        // Create HTTP request to send.
+        HttpRequest request = new HttpRequest();
+        // Set the endpoint URL.
+        String endpoint = 'https://api.ripple.com/v1/wallet/new';
+        request.setEndPoint(endpoint);
+        // Set the HTTP verb to GET.
+        request.setMethod('GET');
+        // Send the HTTP request and get the response.
+        // The response is in JSON format.
+        HttpResponse response = httpProtocol.send(request);
+        JSONParser parser = JSON.createParser(response.getBody());
+        
+        string wallet;
+        string secret;
+        while (parser.nextToken() != null) {
+            if ((parser.getCurrentToken() == JSONToken.FIELD_NAME) &&
+                (parser.getText() == 'address')) {
+                    parser.nextToken();
+                    wallet = parser.getText();
+                }
+            if ((parser.getCurrentToken() == JSONToken.FIELD_NAME) &&
+                (parser.getText() == 'secret')) {
+                    parser.nextToken();
+                    secret = parser.getText();
+                }            
+            
+        }
+        system.debug(wallet+' '+secret);
+        wallet__c[] newWallet = [select id, wallet__c, secret__c from wallet__c where id=:walletId];
+        for (wallet__c newW: newWallet){
+            newW.wallet__c=wallet;                
+            newW.secret__c=secret;
+                }
+        update newWallet;
+        
+        
+    }
+}
