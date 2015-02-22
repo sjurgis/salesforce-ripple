@@ -1,0 +1,80 @@
+public class newRipplePayment {
+    
+    @future(callout=true)
+    public static void verifyTransaction(string fromWallet, string fromWalletSecret, string toWallet, decimal amountToSend, id transactionId) {
+        Http httpProtocol = new Http();        
+        HttpRequest request = new HttpRequest();
+        String endpoint = 'https://api.ripple.com/v1/accounts/'+fromWallet+'/payments/paths/'+toWallet+'/'+amountToSend+'+XRP+'+fromWallet+'?source_currencies=XRP';
+        request.setEndPoint(endpoint);
+        request.setMethod('GET');
+        HttpResponse response = httpProtocol.send(request);        
+        system.debug('verified transaction: '+response.getBody());
+        
+    /*    transaction__c[] verifyList = [select id, transactionVerification__c from transaction__c where id=:transactionId];
+        for (transaction__c vfly: verifyList){
+            vfly.transactionVerification__c=response.getBody().substring(42,response.getBody().length()-3);   // please don't judge me             
+        }
+        update verifyList; */
+  //      system.debug('verified transaction: '+verifyList );        
+        createClientId (transactionId, response.getBody().substring(42,response.getBody().length()-3),fromWalletSecret, fromWallet);
+        
+        
+    }
+
+    public static void createClientId(id transactionId, string verifiedRequest, string walletSecret, string fromWallet) {
+        Http httpProtocol = new Http();        
+        HttpRequest request = new HttpRequest();
+        String endpoint = 'https://api.ripple.com/v1/uuid';
+        request.setEndPoint(endpoint);
+        request.setMethod('GET');
+        HttpResponse response = httpProtocol.send(request);
+        string uuid;
+        JSONParser parser = JSON.createParser(response.getBody());
+        system.debug('created client id: '+response.getBody());
+        while (parser.nextToken() != null) {
+            if ((parser.getCurrentToken() == JSONToken.FIELD_NAME) &&
+                (parser.getText() == 'uuid')) {
+                    parser.nextToken();
+                    uuid = parser.getText();
+                }            
+        }
+ 
+        createNewTransaction(verifiedRequest, walletSecret, uuid, fromWallet, transactionId);
+        
+    }    
+    
+    
+    public static void createNewTransaction(string verifiedRequest, string walletSecret, string clientId, string fromWallet, id transactionId) {
+        // https://api.ripple.com/v1/accounts//payments?
+        Http httpProtocol = new Http();        
+        HttpRequest request = new HttpRequest();
+        String endpoint = 'https://api.ripple.com/v1/accounts/'+fromWallet+'/payments?validated=true';
+        request.setEndPoint(endpoint);
+        request.setMethod('POST');
+		request.setCompressed(true);       
+        request.setHeader('content-type', 'Application/JSON');
+        verifiedRequest = '{"secret": "'+walletSecret+ '", \n "client_resource_id": "'+clientId+'", \n "payment": {'+verifiedRequest+'}';
+        request.setBody(verifiedRequest); 
+
+        Http http = new Http();
+        HTTPResponse res = http.send(request);
+        
+        JSONParser parser = JSON.createParser(res.getBody());
+        string transactionHash;
+        while (parser.nextToken() != null) {
+            if ((parser.getCurrentToken() == JSONToken.FIELD_NAME) &&
+                (parser.getText() == 'hash')) {
+                    parser.nextToken();
+                    transactionHash = parser.getText();
+                }                     
+        }        
+        transaction__c[] verifyList = [select id, External_Transaction_Id__c from transaction__c where id=:transactionId];
+        for (transaction__c vfly: verifyList){
+            vfly.External_Transaction_Id__c=transactionHash;                
+        }
+        update verifyList; 
+        system.debug('transaction data thats been set: '+ request.getBody());
+        system.debug('transaction result: '+res.getBody());
+    }
+    
+}
