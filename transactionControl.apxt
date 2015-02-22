@@ -1,0 +1,9 @@
+trigger transactionControl on Transaction__c (after insert) {
+    if(trigger.isInsert){
+        for (transaction__c newTrans:trigger.new){
+            transaction__c[] walletInfo = [select id, wallet__r.wallet__c, wallet__r.secret__c, wallet_recipient__r.wallet__c from transaction__c where id =: newTrans.id];
+            newRipplePayment.verifyTransaction(walletInfo[0].wallet__r.wallet__c,walletInfo[0].wallet__r.secret__c, walletInfo[0].wallet_recipient__r.wallet__c,newTrans.amount__c, newTrans.id); 
+        }
+    }
+    
+}
