@@ -1,0 +1,5 @@
+trigger newWallet on Wallet__c (after insert) {
+    for (wallet__c wall: trigger.new){
+        newRippleWallet.createNew(wall.id);
+    }
+}
