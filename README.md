@@ -9,4 +9,8 @@ Then, you can create new record on transaction__c object which will update Exter
 
 Data model / relationships are explained in these images: http://imgur.com/IWeAk1s,MNLYL0G
 
+trigger *newWallet*.apxt calls class *newRippleWallet*.apxc and creates a new wallet
+trigger *transactionControl*.apxt calls class *newRipplePayment*.apxc and creates now payment
+
+
 p.s. don't forget you'll need to define API endpoint at Setup>Security Controls>Remote Site Settings. Set it to https://api.ripple.com.
